@@ -15,8 +15,8 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 load("results_forecasts.RData")  #forecasts from Inflation_1990-2000_Forecasting.R 
 
-#install.packages("sandwich")
-#install.packages("MCS")
+install.packages("sandwich")
+install.packages("MCS")
 library(sandwich)
 library(MCS)
 
@@ -60,23 +60,25 @@ rf_pred[-(1:11),12] = rf12$pred
 # RW vs RF
 gwtest_rw_rf = matrix(NA,1,12)     # forecast horizon별 test statistic 결과, difference = rw_pred - rf_pred
 gwpvalue_rw_rf = matrix(NA,1,12)  # forecast horizon별 p-value
-
+gwtest_rw_rf
 # gwtest.R 파일 참조. 귀무가설은 두 모형의 예측력이 동일하다는 것임. 따라서 p-value가 0.05보다 작으면, forecast loss가 작은 모형의 예측력이 통계적으로 유의하게 우월함을 의미함. 
 
 for(i in 1:1){
   
-  gw = gw.test(rw_pred[,i], rf_pred[,i], real, tau=i, T=npred, method="NeweyWest")
+  gw = gw.test(adalasso_pred[,i], rf_pred[,i], real, tau=i, T=npred, method="NeweyWest")
   
   gwtest_rw_rf[i] <- gw$statistic
   gwpvalue_rw_rf[i] <- gw$p.value
 }
 
 for(i in 2:12){
-  gw = gw.test(rw_pred[-(1:(i-1)),i], rf_pred[-(1:(i-1)),i], real[-(1:(i-1))], tau=i, T=(npred-i+1), method="NeweyWest")
+  gw = gw.test(adalasso_pred[-(1:(i-1)),i], rf_pred[-(1:(i-1)),i], real[-(1:(i-1))], tau=i, T=(npred-i+1), method="NeweyWest")
   
   gwtest_rw_rf[i] <- gw$statistic
   gwpvalue_rw_rf[i] <- gw$p.value
 }
+
+# gwtest와 gwpvalue를 정리할 필요성
 
 ##
 
