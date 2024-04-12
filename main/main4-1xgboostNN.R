@@ -1,6 +1,6 @@
 ######################## Xgboost ##########################
 # Import the Boosting function
-source('functions/func-xgb.R')
+source('main/functions/func-xgb.R')
 library(HDeconometrics)
 library(xgboost)
 
@@ -19,8 +19,7 @@ xgb.mae = cbind(xgb1$errors[2], xgb3$errors[2], xgb6$errors[2], xgb9$errors[2], 
 
 
 ######################## Neural Networks(Deep Learning) ##########################
-source("functions/func-nn.R")
-
+source("main/functions/func-nn.R")
 library(dplyr)
 library(keras)
 

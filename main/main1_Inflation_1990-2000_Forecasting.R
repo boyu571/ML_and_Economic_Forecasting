@@ -22,7 +22,7 @@ library(HDeconometrics)
 
 
 # Loading Data
-load("rawdata.rda")
+load("main/rawdata.rda")
 Y = dados
 
 
