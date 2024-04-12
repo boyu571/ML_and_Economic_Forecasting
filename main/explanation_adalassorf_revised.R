@@ -10,6 +10,7 @@ library(glmnet)
 #install.packages("remotes")
 remotes::install_github("gabrielrvsc/HDeconometrics")
 library(HDeconometrics)
+library(randomForest)
 
 source("functions/func-adalassorf.R")
 
@@ -19,7 +20,7 @@ Y=dados
 
 nprev=132
 
-indice=1
+indice=1                                                           
 lag=1
 horizon = 1
 type="adalasso"

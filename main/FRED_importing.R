@@ -5,6 +5,7 @@ dir()
 
 install.packages("devtools")  #github의 package들을 인스톨할 수 있게 함 
 
+
 # Installing 'fbi' Package from Github
 library(devtools)  
 install_github("cykbennie/fbi")
