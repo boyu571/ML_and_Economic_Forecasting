@@ -240,14 +240,10 @@ install.packages("tensorflow")  #관리자 권한으로 실행
 library(tensorflow)
 install_tensorflow()
 
-library(reticulate)
-use_python("C:/Users/user/anaconda3", required = TRUE)  # "/path/to/python"을 해당 환경의 Python 실행 파일 경로로 대체하세요.
-py_discover_config()
-
-
-
-install.packages("keras")  #관리자 권한으로 실행
 library(keras)
+library(reticulate)
+use_condaenv("r-reticulate", required = TRUE)
+print(py_config())
 
 # ==================================================================
 # Normalization
