@@ -1,8 +1,10 @@
 library(rstudioapi)
 library(devtools)  
 library(HDeconometrics)
+
 dir()
 
+load("강려명_part1.RData") 
 data = read.csv("project2024/DataKoreaFrom200408To202306.csv")   
 
 tcode = data[1,]  # first element: Transformation code
@@ -154,6 +156,7 @@ source('main/functions/func-xgb.R')
 library(HDeconometrics)
 library(xgboost)
 
+
 xgb1=xgb.rolling.window(Y,npred,1,1)
 xgb3=xgb.rolling.window(Y,npred,1,3)
 xgb6=xgb.rolling.window(Y,npred,1,6)
@@ -233,21 +236,20 @@ BS_RF12 = rf.rolling.window(Y2,npred,1,12,selected12)
 #install.packages("tidyverse")
 library(tidyverse)
 library(ggplot2)
-#install.packages("reshape2")
 library(reshape2)
 
 install.packages("tensorflow")  #관리자 권한으로 실행 
 library(tensorflow)
-install_tensorflow()
+# install_tensorflow()
 
-install.packages("rpy2")
+install.packages("keras")
 
 library(keras)
 library(reticulate)
 tf <- reticulate::import("tensorflow")
 print(tf$`__version__`)
 
-use_condaenv("r-reticulate", required = TRUE)
+
 print(py_config())
 
 # ==================================================================
@@ -266,23 +268,6 @@ indice = 1
 horizon = 1
 lag = horizon
 
-# 패키지 로드 확인
-if (!require(tensorflow)) install.packages("tensorflow")
-if (!require(reticulate)) install.packages("reticulate")
-
-# 패키지 로드
-library(tensorflow)
-library(reticulate)
-
-
-if (!requireNamespace("tensorflow", quietly = TRUE))
-  install.packages("tensorflow")
-library(tensorflow)
-tensorflow::install_tensorflow()
-tf$random$set_seed(42)
-
-
-# FINAL CHECK COMPLETE
 
 source("main/functions/func-lstm.R")
 
@@ -305,7 +290,7 @@ lstm_12$errors
 library(stringr)
 library(openxlsx)
 
-# load("강려명_part1.RData") 
+
 
 stack <- NULL
 
@@ -364,8 +349,6 @@ sheets <- list("error_rmse" = error_rmse, "error_mae" = error_mae)
 write.xlsx(sheets, file = "errortable.xlsx", rowNames=TRUE)
 #####
 
-install.packages("sandwich")
-install.packages("MCS")
 library(sandwich)
 library(MCS)
 
@@ -583,7 +566,73 @@ for(i in 4:4){
 }
 
 
+# 6번 best model
+library(Boruta)
+library(randomForest)
 
+Y3 = Y[c(106:225),]
+
+# Example for lag = 12 setting
+lag = 6  # lag = horizon
+
+aux = embed(Y3,4+lag)
+y=aux[,1]
+X=aux[,-c(1:(ncol(Y2)*lag))]
+
+
+set.seed(42)
+boruta_12 <- Boruta(X, y, maxRuns = 100)
+
+plot = plot(boruta_12)
+plot
+
+attstats = attStats(boruta_12)
+attstats
+
+#write.csv(attstats,"Boruta_12.csv",sep=";",row.names = FALSE, col.names = FALSE)
+
+order = order(attstats$meanImp, decreasing = T)
+
+order
+## Cross Validation for Optimal Number of Variables # (Up to 70 Variables)
+
+Errors = rep(NA,70)          
+
+for (i in 2:70){
+  
+  selected = order[1:i]
+  
+  model=randomForest(X[,selected], y, importance=TRUE)
+  
+  pred = model$predicted     
+  error = mean((pred-y)^2)
+  
+  Errors[i] <- error
+}
+
+plot(c(1:70), Errors, xlab="# of Variables", ylab="Fitted Squared Error")
+
+Errors1 = Errors
+
+
+varOrder = order(attstats$meanImp, decreasing = T)   # Ordering of Variables
+which.min(Errors1)                                    # Optimal Number of Variables 
+selected6 = varOrder[1:which.min(Errors1)]             # The Set of Optimal Number of Variables
+#selected = varOrder[1:16]                 # 꺾이는 부분. 16개까지만 사용 
+
+
+
+source("main/functions/func-rf_selected2022.R")
+
+INF_202306 = runrf(Y2,1,3, selected3)
+INF_202309 = runrf(Y2,1,6, selected6)
+INF_202306
+INF_202309
+
+
+
+
+# 변수 중요도 및 오차 계산은 동일하게 유지
 
 # saving entire worksapce
 save.image("강려명_part1.RData")  
