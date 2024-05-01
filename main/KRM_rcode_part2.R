@@ -5,22 +5,21 @@ dir()
 
 data = read.csv("project2024/DataKoreaFrom200408To202306.csv")   
 
-data
+# CPI 데이터 추출
 CPI <- data$CPI   # from 2004.08
-CPI <- CPI %>% as.matrix()
-CPI <- CPI[-1,]
-CPI
+CPI <- as.numeric(CPI)  # 데이터 타입을 숫자로 변환 (만약 필요하다면)
+CPI <- CPI[-1]  # 첫 번째 데이터(헤더나 불필요 데이터가 아니라면 이 줄은 제거)
 
-CPI2 <- NULL
-n <- nrow(CPI)
-n
+# 전년 동월 대비 CPI 계산을 위한 로그 차이
+n <- length(CPI)  # CPI의 길이 계산
+
+# 결과를 저장할 벡터 초기화
+CPI2 <- numeric(n - 12)  # NULL 대신 사전에 크기를 지정
 
 for (j in 1:(n-12)) {
-  CPI2[j] <- log(CPI[j+12,1])-log(CPI[j,1])  
-  
+  CPI2[j] <- log(CPI[j+12]) - log(CPI[j])  # 로그 차이 계산, 벡터 인덱스 사용
 }
-CPI
-
+CPI2
 
 
 tcode = data[1,]  # first element: Transformation code
@@ -70,25 +69,21 @@ tdata
 fdata = tdata
 complete.cases(fdata)  # no missing values
 
-# fdata 행렬에서 'CPI' 열의 인덱스 찾기
-cpi_index <- which(colnames(fdata) == "CPI")
-cpi_index # 65
-fdata
 
-Y = cbind(fdata[,65],fdata[,c(-1,-65)]) 
+CPI2 <- as.matrix(CPI2)
+Y = cbind(CPI2[c(-1, -2),],fdata[c(--1:-12),c(-1,-65)]) 
 mode(Y)
 
 Y= as.matrix(Y)
 mode(Y)
-
-Y
 # 첫 번째 열의 이름을 'CPI'로 변경
 colnames(Y)[1] <- "CPI"
 Y
+complete.cases(Y)
 
 # Number of Forecasts
-npred=105
-# 225-120
+npred=93
+# 213-120
 
 ## Random Walk Model ##
 source("main/functions/func-rw.R")
@@ -316,15 +311,14 @@ lstm_6$errors
 lstm_12 <- mul.lstm.rolling.window(Y,npred,1,12)  
 lstm_12$errors 
 
-# saving entire worksapce
-save.image("강려명_part1.RData")    
+  
 
 
 
 library(stringr)
 library(openxlsx)
 
-# load("강려명_part1.RData") 
+# load("강려명_part2.RData") 
 
 stack <- NULL
 
@@ -470,59 +464,59 @@ bs_rf_pred[-(1:11),4] = BS_RF12$pred
 gwtest <- function (model){
   
   source("main/functions/gwtest.R")
-  npred=105
+  npred=93
   real=tail(Y[,1],npred)  
-  gwtest_bs_rf_model = matrix(NA,1,4)     
-  gwpvalue_bs_rf_model = matrix(NA,1,4) 
+  gwtest_best_model = matrix(NA,1,4)     
+  gwpvalue_best_model = matrix(NA,1,4) 
   
   
   for(i in 1:1){
     
-    gw = gw.test(bs_rf_pred[,i], model[,i], real, tau=i, T=npred, method="NeweyWest")
+    gw = gw.test(rw_pred[,i], model[,i], real, tau=i, T=npred, method="NeweyWest")
     
-    gwtest_bs_rf_model[i] <- gw$statistic
-    gwpvalue_bs_rf_model[i] <- gw$p.value
+    gwtest_best_model[i] <- gw$statistic
+    gwpvalue_best_model[i] <- gw$p.value
   }
   
   
-  gw = gw.test(bs_rf_pred[-(1:2),2], model[-(1:2),2], real[-(1:2)], tau=3, T=(npred-2), method="NeweyWest")
+  gw = gw.test(rw_pred[-(1:2),2], model[-(1:2),2], real[-(1:2)], tau=3, T=(npred-2), method="NeweyWest")
   
-  gwtest_bs_rf_model[2] <- gw$statistic
-  gwpvalue_bs_rf_model[2] <- gw$p.value
-  
-  
-  gw = gw.test(bs_rf_pred[-(1:5),3], model[-(1:5),3], real[-(1:5)], tau=6, T=(npred-5), method="NeweyWest")
-  
-  gwtest_bs_rf_model[3] <- gw$statistic
-  gwpvalue_bs_rf_model[3] <- gw$p.value
+  gwtest_best_model[2] <- gw$statistic
+  gwpvalue_best_model[2] <- gw$p.value
   
   
-  gw = gw.test(bs_rf_pred[-(1:11),4], model[-(1:11),4], real[-(1:11)], tau=12, T=(npred-11), method="NeweyWest")
+  gw = gw.test(rw_pred[-(1:5),3], model[-(1:5),3], real[-(1:5)], tau=6, T=(npred-5), method="NeweyWest")
   
-  gwtest_bs_rf_model[4] <- gw$statistic
-  gwpvalue_bs_rf_model[4] <- gw$p.value
+  gwtest_best_model[3] <- gw$statistic
+  gwpvalue_best_model[3] <- gw$p.value
+  
+  
+  gw = gw.test(rw_pred[-(1:11),4], model[-(1:11),4], real[-(1:11)], tau=12, T=(npred-11), method="NeweyWest")
+  
+  gwtest_best_model[4] <- gw$statistic
+  gwpvalue_best_model[4] <- gw$p.value
   
   
   
-  return(list(gwtest_bs_rf_model, gwpvalue_bs_rf_model))
+  return(list(gwtest_best_model, gwpvalue_best_model))
 }
 
 # 함수 호출
-boruta_rw <- gwtest(rw_pred)
-boruta_ar <- gwtest(ar_pred)
-boruta_lasso <- gwtest(lasso_pred)
-boruta_adalasso <- gwtest(adalasso_pred)
-boruta_elasticnet <- gwtest(elasticnet_pred)
-boruta_adaelasticnet <- gwtest(adaelasticnet_pred)
-boruta_rf <- gwtest(rf_pred)
-boruta_nn <- gwtest(nn_pred)
+#best_rw <- gwtest(rw_pred)
+best_ar <- gwtest(ar_pred)
+best_lasso <- gwtest(lasso_pred)
+best_adalasso <- gwtest(adalasso_pred)
+best_elasticnet <- gwtest(elasticnet_pred)
+best_adaelasticnet <- gwtest(adaelasticnet_pred)
+best_rf <- gwtest(rf_pred)
+best_nn <- gwtest(nn_pred)
 # boruta_lstm <- gwtest(lstm_pred)
-boruta_xgb <- gwtest(xgb_pred)
+best_xgb <- gwtest(xgb_pred)
+best_bs_rf <- gwtest(xgb_pred)
 
+part1_test_result1 <- rbind(best_ar[[1]],best_lasso[[1]],best_adalasso[[1]],best_elasticnet[[1]],best_adaelasticnet[[1]],best_rf[[1]],best_nn[[1]],best_xgb[[1]],best_bs_rf[[1]])
 
-part1_test_result1 <- rbind(boruta_rw[[1]],boruta_ar[[1]],boruta_lasso[[1]],boruta_adalasso[[1]],boruta_elasticnet[[1]],boruta_adaelasticnet[[1]],boruta_rf[[1]],boruta_nn[[1]],boruta_xgb[[1]])
-
-part1_test_result2 <- rbind(boruta_rw[[2]],boruta_ar[[2]],boruta_lasso[[2]],boruta_adalasso[[2]],boruta_elasticnet[[2]],boruta_adaelasticnet[[2]],boruta_rf[[2]],boruta_nn[[2]],boruta_xgb[[2]])
+part1_test_result2 <- rbind(best_ar[[2]],best_lasso[[2]],best_adalasso[[2]],best_elasticnet[[2]],best_adaelasticnet[[2]],best_rf[[2]],best_nn[[2]],best_xgb[[2]],best_bs_rf[[2]])
 
 write.csv(part1_test_result1 ,file= "part1_test1.csv")
 write.csv(part1_test_result2 ,file= "part1_test2.csv")
@@ -600,3 +594,7 @@ for(i in 4:4){
   
   SSM_12 <- MCSprocedure(LOSS1, alpha=0.5, B=5000, statistic="TR")
 }
+
+
+# saving entire worksapce
+save.image("강려명_part2.RData")  
